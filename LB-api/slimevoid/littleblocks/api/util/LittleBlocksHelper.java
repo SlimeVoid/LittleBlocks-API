@@ -1,20 +1,43 @@
 package slimevoid.littleblocks.api.util;
 
+import net.minecraft.entity.player.EntityPlayer;
 import net.minecraft.tileentity.TileEntity;
 import net.minecraft.world.World;
 import slimevoid.lib.ICommonProxy;
+import slimevoid.lib.ISlimevoidHelper;
+import slimevoid.lib.core.SlimevoidHelper;
 import slimevoid.littleblocks.api.ILBCommonProxy;
 import slimevoid.littleblocks.api.ILittleBlocks;
 
-public class LittleBlocksHelper {
+public class LittleBlocksHelper implements ISlimevoidHelper {
 	
-	private static ICommonProxy proxy;
+	private static boolean initialized = false;
+	private ICommonProxy proxy;
+	private int size;
 	
-	public static void init(ICommonProxy littleProxy) {
-		proxy = littleProxy;
+	/**
+	 * Constructor
+	 * 
+	 * @param littleProxy the LB Proxy
+	 * @param littleBlocksSize the size of LB
+	 */
+	public LittleBlocksHelper(ICommonProxy littleProxy, int littleBlocksSize) {
+		this.proxy = littleProxy;
+		this.size = littleBlocksSize;
 	}
 
-	public static int getBlockId(World world, int x, int y,
+	/**
+	 * Initialized the Helper
+	 */
+	public static void init(ICommonProxy littleProxy, int littleBlocksSize) {
+		if (!initialized) {
+			ISlimevoidHelper littleBlocksHelper = new LittleBlocksHelper(littleProxy, littleBlocksSize);
+			SlimevoidHelper.registerHelper(littleBlocksHelper);
+			initialized = true;
+		}
+	}
+
+	public int getBlockId(World world, int x, int y,
 			int z) {
 		if (world != null) {
 			return getWorld(world, x, y, z).getBlockId(x, y, z);
@@ -22,31 +45,52 @@ public class LittleBlocksHelper {
 		return 0;
 	}
 
-	public static TileEntity getBlockTileEntity(World world, int x, int y, int z) {
+	public TileEntity getBlockTileEntity(World world, int x, int y, int z) {
 		if (world != null) {
 			return getWorld(world, x, y, z).getBlockTileEntity(x, y, z);	
 		}
 		return null; 
 	}
 	
-	public static boolean targetExists(World world, int x, int y, int z) {
+	public boolean targetExists(World world, int x, int y, int z) {
 		if (world != null) {
 			return getWorld(world, x, y, z).blockExists(x, y, z);
 		}
 		return false;
 	}
 
-	private static World getWorld(World world, int x, int y, int z) {
+	private World getWorld(World world, int x, int y, int z) {
 		if (isLittleBlock(world, x, y, z)) {
 			return (World)((ILBCommonProxy)proxy).getLittleWorld(world, false);
 		}
 		return world;
 	}
 
-	private static boolean isLittleBlock(World world, int x, int y, int z) {
+	private boolean isLittleBlock(World world, int x, int y, int z) {
 		if (world.getBlockTileEntity(x >> 3, y >> 3, z >> 3) instanceof ILittleBlocks) {
 			return true;
 		}
 		return false;
+	}
+	
+	public boolean isUseableByPlayer(
+			World world, 
+			EntityPlayer player,
+			int xCoord,
+			int yCoord,
+			int zCoord,
+			double xDiff, 
+			double yDiff, 
+			double zDiff, 
+			double distance) {
+		if (isLittleBlock(world, xCoord, yCoord, zCoord)) {
+			return player.getDistanceSq((double)(xCoord / size) + xDiff, (double)(yCoord / size) + yDiff, (double)(zCoord / size) + zDiff) <= distance;
+		}
+		return false;
+	}
+
+	@Override
+	public String getHelperName() {
+		return "LittleBlocks Helper";
 	}
 }
